@@ -17,33 +17,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { getKey } from "@/lib/key";
 import { findMissing, parseSyllabus, type SyllabusItem } from "@/lib/syllabus";
+import { calendarDay, dueLabel } from "@/lib/due";
+import { errorMessage } from "@/lib/errors";
+import { useSetupMode } from "@/lib/setupMode";
 
 type PreviewItem = SyllabusItem & { missing: boolean };
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-function calendarDay(value: number | Date) {
-  const date = value instanceof Date ? value : new Date(value);
-  return Math.floor(
-    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / DAY_MS,
-  );
-}
-
-function dueLabel(due?: number) {
-  if (due === undefined) return "No due date";
-  const days = calendarDay(due) - calendarDay(new Date());
-  if (days < 0) return `Due ${Math.abs(days)} day${days === -1 ? "" : "s"} ago`;
-  if (days === 0) return "Due today";
-  if (days === 1) return "Due tomorrow";
-  if (days <= 7) return `Due in ${days} days`;
-
-  const date = new Date(due);
-  const includeYear = date.getFullYear() !== new Date().getFullYear();
-  return `Due ${date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    ...(includeYear ? { year: "numeric" } : {}),
-  })}`;
-}
 
 function sampleSyllabus() {
   const dateAfter = (days: number) => {
@@ -66,6 +44,7 @@ function sampleSyllabus() {
 
 export function Assignments() {
   const key = getKey();
+  const setupMode = useSetupMode();
   const [now] = useState(() => Date.now());
   const assignments = useQuery(api.assignments.list, { key, now });
   const courses = useQuery(api.courses.list, { key });
@@ -138,18 +117,12 @@ export function Assignments() {
     try {
       const result = await syncCanvas({ key });
       if (result.error) {
-        toast.error(
-          `${result.error}. Set CANVAS_TOKEN via npx convex env set CANVAS_TOKEN ...`,
-        );
+        toast.error(`${result.error}. Add your Canvas token on the Setup tab.`);
       } else {
         toast.success(`Synced ${result.synced} assignments from Canvas.`);
       }
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Canvas sync failed.";
-      toast.error(
-        `${message}. Set CANVAS_TOKEN via npx convex env set CANVAS_TOKEN ...`,
-      );
+      toast.error(errorMessage(error, "Canvas sync failed."));
     } finally {
       setSyncing(false);
     }
@@ -181,9 +154,7 @@ export function Assignments() {
       );
       setPreview(null);
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Could not add assignments.",
-      );
+      toast.error(errorMessage(error, "Could not add assignments."));
     } finally {
       setAdding(false);
     }
@@ -198,7 +169,7 @@ export function Assignments() {
   const missingCount = preview?.filter((item) => item.missing).length ?? 0;
 
   return (
-    <section className="grid gap-6 lg:grid-cols-2">
+    <section className={setupMode ? "grid gap-6 lg:grid-cols-2" : "mx-auto max-w-3xl"}>
       <Card>
         <CardHeader className="flex-row items-start justify-between gap-4">
           <div className="space-y-1.5">
@@ -206,7 +177,7 @@ export function Assignments() {
             <CardDescription>
               Keep track of what’s due across your courses.
             </CardDescription>
-            {unlinkedCourses.length > 0 && (
+            {setupMode && unlinkedCourses.length > 0 && (
               <p className="text-xs text-muted-foreground">
                 Add{" "}
                 <a className="underline underline-offset-2" href="#setup">
@@ -343,6 +314,7 @@ export function Assignments() {
         </CardContent>
       </Card>
 
+      {setupMode && (
       <Card>
         <CardHeader>
           <CardTitle>Syllabus catcher</CardTitle>
@@ -454,6 +426,7 @@ export function Assignments() {
           )}
         </CardContent>
       </Card>
+      )}
     </section>
   );
 }

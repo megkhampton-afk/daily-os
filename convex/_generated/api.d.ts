@@ -13,6 +13,7 @@ import type * as calendar from "../calendar.js";
 import type * as calendarMatch from "../calendarMatch.js";
 import type * as capture from "../capture.js";
 import type * as courses from "../courses.js";
+import type * as crons from "../crons.js";
 import type * as emails from "../emails.js";
 import type * as folders from "../folders.js";
 import type * as http from "../http.js";
@@ -34,6 +35,7 @@ declare const fullApi: ApiFromModules<{
   calendarMatch: typeof calendarMatch;
   capture: typeof capture;
   courses: typeof courses;
+  crons: typeof crons;
   emails: typeof emails;
   folders: typeof folders;
   http: typeof http;

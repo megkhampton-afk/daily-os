@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/errors";
 import { useState, type FormEvent } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
@@ -36,7 +37,7 @@ export function Todos() {
       await addManualTask({ key, title: trimmed });
       setTitle("");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not add that to-do.");
+      toast.error(errorMessage(err, "Could not add that to-do."));
     } finally {
       setAdding(false);
     }
@@ -48,7 +49,7 @@ export function Todos() {
       await clearCompletedTasks({ key });
       toast.success("Cleared completed to-dos.");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not clear completed to-dos.");
+      toast.error(errorMessage(err, "Could not clear completed to-dos."));
     } finally {
       setClearing(false);
     }

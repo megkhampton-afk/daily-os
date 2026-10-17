@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/errors";
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
@@ -83,7 +84,7 @@ function Fields({
       setValues({});
       toast.success("Saved");
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(errorMessage(e));
     } finally {
       setSaving(false);
     }
@@ -131,7 +132,7 @@ function CourseLinksCard() {
       setLink("");
       toast.success("Course link saved");
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(errorMessage(e));
     } finally {
       setSaving(false);
     }
@@ -148,7 +149,7 @@ function CourseLinksCard() {
       </CardHeader>
       <CardContent className="space-y-4">
         {courses === undefined ? (
-          <p className="text-sm text-muted-foreground">Loading…</p>
+          <p className="text-sm text-muted-foreground">Loadingâ€¦</p>
         ) : courses.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             No courses yet. Use the exact course code shown on assignments (for example 6.390).
@@ -191,7 +192,7 @@ function CourseLinksCard() {
           />
           <Input
             className="flex-1"
-            placeholder="https://www.gradescope.com/courses/…"
+            placeholder="https://www.gradescope.com/courses/â€¦"
             value={link}
             onChange={(e) => setLink(e.target.value)}
           />

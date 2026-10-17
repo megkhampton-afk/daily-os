@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/errors";
 import { useEffect, useState } from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
@@ -60,7 +61,7 @@ function ProviderFolders({ provider, account }: { provider: Provider; account: s
       setNewName("");
       toast.success(`Created "${f.name}"`);
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(errorMessage(e));
     } finally {
       setCreating(false);
     }
@@ -105,7 +106,7 @@ function ProviderFolders({ provider, account }: { provider: Provider; account: s
       </form>
       {chosen.length > 0 && (
         <p className="text-xs text-muted-foreground">
-          Sorting order: {chosen.map((f, i) => `${i + 1} ${f.name}`).join(" · ")}
+          Sorting order: {chosen.map((f, i) => `${i + 1} ${f.name}`).join(" Â· ")}
         </p>
       )}
     </div>

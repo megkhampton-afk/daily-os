@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/errors";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAction } from "convex/react";
 import { api } from "../convex/_generated/api";
@@ -80,7 +81,7 @@ export function Schedule() {
       const b = dayBounds(3);
       setData(await fetchRange({ key, start: a.start, end: b.start }));
     } catch (e) {
-      setData({ connected: true, events: [], error: (e as Error).message });
+      setData({ connected: true, events: [], error: errorMessage(e) });
     } finally {
       setLoading(false);
     }
@@ -124,7 +125,7 @@ export function Schedule() {
             <CardDescription>
               {data?.connected === false
                 ? "Connect Google on the Email triage tab to see your calendar."
-                : `${timed.length} event${timed.length === 1 ? "" : "s"} · ${duration(totalFree)} free between ${DAY_START_HOUR} am and ${DAY_END_HOUR - 12} pm`}
+                : `${timed.length} event${timed.length === 1 ? "" : "s"} Â· ${duration(totalFree)} free between ${DAY_START_HOUR} am and ${DAY_END_HOUR - 12} pm`}
             </CardDescription>
           </div>
           <div className="flex items-center gap-1">
@@ -150,7 +151,7 @@ export function Schedule() {
                     width: `calc(${pct(e.end)} - ${pct(e.start)})`,
                     background: e.color ?? "hsl(var(--primary))",
                   }}
-                  title={`${e.title} ${fmt(e.start)}–${fmt(e.end)}`}
+                  title={`${e.title} ${fmt(e.start)}â€“${fmt(e.end)}`}
                 />
               ))}
             </div>
@@ -180,13 +181,13 @@ export function Schedule() {
             <div key={r.e.id} className="flex gap-3 rounded-md border px-3 py-2">
               <div className="w-1 shrink-0 rounded-full" style={{ background: r.e.color ?? "hsl(var(--primary))" }} />
               <div className="w-24 shrink-0 text-xs leading-5 text-muted-foreground">
-                {fmt(r.e.start)}–{fmt(r.e.end)}
+                {fmt(r.e.start)}â€“{fmt(r.e.end)}
               </div>
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium">{r.e.title}</p>
                 <p className="truncate text-xs text-muted-foreground">
                   {r.e.calendar}
-                  {r.e.location ? ` · ${r.e.location}` : ""}
+                  {r.e.location ? ` Â· ${r.e.location}` : ""}
                 </p>
               </div>
             </div>
@@ -199,9 +200,9 @@ export function Schedule() {
             >
               <div className="w-1 shrink-0" />
               <div className="w-24 shrink-0 text-xs leading-5">
-                {fmt(r.f.start)}–{fmt(r.f.end)}
+                {fmt(r.f.start)}â€“{fmt(r.f.end)}
               </div>
-              <p className="text-sm font-medium">Free · {duration(r.f.end - r.f.start)}</p>
+              <p className="text-sm font-medium">Free Â· {duration(r.f.end - r.f.start)}</p>
             </div>
           ),
         )}

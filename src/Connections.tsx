@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/errors";
 import { useState } from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
@@ -23,7 +24,7 @@ export function Connections() {
         returnTo: window.location.origin + window.location.pathname,
       });
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(errorMessage(e));
     }
   }
 
@@ -36,8 +37,8 @@ export function Connections() {
         r.microsoft && `Outlook: ${r.microsoft}`,
       ].filter(Boolean);
       if (!parts.length) toast.info("Connect an account first");
-      else if (parts.some((p) => String(p).includes("error"))) toast.error(parts.join(" · "));
-      else toast.success(parts.join(" · "));
+      else if (parts.some((p) => String(p).includes("error"))) toast.error(parts.join(" Â· "));
+      else toast.success(parts.join(" Â· "));
     } finally {
       setSyncing(false);
     }

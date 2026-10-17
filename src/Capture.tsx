@@ -9,6 +9,7 @@ import { CalendarIcon, CheckCircledIcon, PaperPlaneIcon } from "@radix-ui/react-
 import { toast } from "sonner";
 import { parseCapture, relTime } from "@/lib/capture";
 import { getKey } from "@/lib/key";
+import { useSetupMode } from "@/lib/setupMode";
 
 const EXAMPLES = [
   "dinner with Sam thursday 7pm, finish 6.390 pset by friday",
@@ -17,6 +18,7 @@ const EXAMPLES = [
 ];
 
 export function Capture({ compact = false }: { compact?: boolean }) {
+  const setupMode = useSetupMode();
   const [text, setText] = useState("");
   const addItems = useMutation(api.capture.addItems);
   const preview = useMemo(() => parseCapture(text), [text]);
@@ -51,7 +53,7 @@ export function Capture({ compact = false }: { compact?: boolean }) {
           }}
           className="text-base"
         />
-        {!text && (
+        {setupMode && !text && (
           <div className="flex flex-wrap gap-2">
             {EXAMPLES.map((ex) => (
               <button

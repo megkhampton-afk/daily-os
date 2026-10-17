@@ -1,5 +1,5 @@
 import { ConvexError, v } from "convex/values";
-import { mutation, MutationCtx, query } from "./_generated/server";
+import { internalMutation, mutation, MutationCtx, query } from "./_generated/server";
 import { checkKey, keyArg, readSetting, SETTING_NAMES, SettingName } from "./key";
 
 const settingName = v.union(...SETTING_NAMES.map((n) => v.literal(n)));
@@ -58,5 +58,19 @@ export const createPasscode = mutation({
     if (passcode.trim().length < 4) throw new ConvexError("Use at least 4 characters");
     await upsert(ctx, "APP_PASSCODE", passcode.trim());
     return null;
+  },
+});
+
+// Recovery for a forgotten passcode. Internal, so it can only be run by
+// whoever controls the backend: `npx convex run settings:resetPasscode`.
+export const resetPasscode = internalMutation({
+  args: {},
+  returns: v.string(),
+  handler: async (ctx) => {
+    await upsert(ctx, "APP_PASSCODE", "");
+    if (process.env.APP_PASSCODE) {
+      return "Cleared the saved passcode, but APP_PASSCODE is also set as a deployment environment variable, which still applies. Remove it with: npx convex env remove APP_PASSCODE";
+    }
+    return "Passcode cleared. Reload the app to create a new one.";
   },
 });

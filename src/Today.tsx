@@ -6,9 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { Cross2Icon } from "@radix-ui/react-icons";
 import { relTime } from "@/lib/capture";
 import { getKey } from "@/lib/key";
+import { useSetupMode } from "@/lib/setupMode";
 
 export function Today() {
   const key = getKey();
+  const setupMode = useSetupMode();
   const tasks = useQuery(api.capture.listTasks, { key });
   const events = useQuery(api.capture.listEvents, { key });
   const status = useQuery(api.oauth.status, { key });
@@ -54,9 +56,18 @@ export function Today() {
         <CardHeader>
           <CardTitle>Upcoming events</CardTitle>
           <CardDescription>
-            {status?.google
-              ? `Syncing automatically to ${status.google}'s Google Calendar`
-              : "Connect Google on the Email tab to sync events to your calendar automatically"}
+            {status?.google ? (
+              `Syncing automatically to ${status.google}'s Google Calendar`
+            ) : setupMode ? (
+              <>
+                <a href="#setup" className="underline">
+                  Connect Google
+                </a>{" "}
+                to sync events to your calendar automatically
+              </>
+            ) : (
+              "What's coming up next"
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">

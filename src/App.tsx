@@ -18,6 +18,10 @@ import { Today } from "@/Today";
 import { Todos } from "@/Todos";
 import { Assignments } from "@/Assignments";
 import { EmailTriage } from "@/EmailTriage";
+import { DueSoon } from "@/DueSoon";
+import { SetupSwitch } from "@/components/SetupSwitch";
+import { errorMessage } from "@/lib/errors";
+import { isSetupMode, setSetupMode, useSetupMode } from "@/lib/setupMode";
 
 function useHash() {
   const [hash, setHash] = useState(window.location.hash);
@@ -44,6 +48,7 @@ function useConnectToast() {
 function Gate({ children }: { children: React.ReactNode }) {
   const [key, setKeyState] = useState(getKey());
   const [draft, setDraft] = useState("");
+  const [busy, setBusy] = useState(false);
   const res = useQuery(api.key.verify, { key });
   const createPasscode = useMutation(api.settings.createPasscode);
 
@@ -52,12 +57,22 @@ function Gate({ children }: { children: React.ReactNode }) {
   const creating = res.needsPasscode;
 
   async function submitPasscode() {
+    if (!draft.trim() || busy) return;
     if (creating) {
+      setBusy(true);
       try {
         await createPasscode({ passcode: draft });
       } catch (err) {
-        toast.error((err as Error).message);
+        const msg = errorMessage(err);
+        // Another tab (or an earlier run) already set one; the screen
+        // switches to Unlock on its own once the query refreshes.
+        toast.error(
+          msg === "A passcode already exists" ? "This copy already has a passcode. Enter it to unlock." : msg,
+        );
+        setDraft("");
         return;
+      } finally {
+        setBusy(false);
       }
     }
     setKey(draft.trim());
@@ -85,9 +100,24 @@ function Gate({ children }: { children: React.ReactNode }) {
               void submitPasscode();
             }}
           >
-            <Input type="password" autoFocus value={draft} onChange={(e) => setDraft(e.target.value)} />
-            <Button type="submit">{creating ? "Create" : "Unlock"}</Button>
+            <Input
+              type="password"
+              autoFocus
+              autoComplete={creating ? "new-password" : "current-password"}
+              placeholder={creating ? "At least 4 characters" : "Passcode"}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+            />
+            <Button type="submit" disabled={busy || !draft.trim()}>
+              {creating ? "Create" : "Unlock"}
+            </Button>
           </form>
+          {!creating && (
+            <p className="text-xs text-muted-foreground">
+              Forgot it? In the project folder run <code className="rounded bg-muted px-1">npx convex run settings:resetPasscode</code>,
+              then reload this page to create a new one.
+            </p>
+          )}
         </CardContent>
       </Card>
       <Toaster richColors position="top-center" />
@@ -108,7 +138,24 @@ function Main() {
   const hash = useHash();
   const greeting = new Date().getHours() < 12 ? "Good morning" : new Date().getHours() < 18 ? "Good afternoon" : "Good evening";
   const name = import.meta.env.VITE_OWNER_NAME as string | undefined;
-  const tab = TABS.includes(hash.slice(1)) ? hash.slice(1) : "today";
+  const setupMode = useSetupMode();
+  const requested = TABS.includes(hash.slice(1)) ? hash.slice(1) : "today";
+  const tab = requested === "setup" && !setupMode ? "today" : requested;
+
+  // Following any "Set up" link (or opening #setup directly) turns setup mode on.
+  useEffect(() => {
+    const on = () => {
+      if (window.location.hash === "#setup" && !isSetupMode()) setSetupMode(true);
+    };
+    on();
+    window.addEventListener("hashchange", on);
+    return () => window.removeEventListener("hashchange", on);
+  }, []);
+
+  function toggleSetup(next: boolean) {
+    if (!next && tab === "setup") window.location.hash = "today";
+    setSetupMode(next);
+  }
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -124,6 +171,7 @@ function Main() {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            <SetupSwitch on={setupMode} onChange={toggleSetup} />
             <ThemeToggle />
           </div>
         </header>
@@ -134,7 +182,7 @@ function Main() {
             <TabsTrigger value="schedule">Schedule</TabsTrigger>
             <TabsTrigger value="assignments">Assignments</TabsTrigger>
             <TabsTrigger value="email">Email triage</TabsTrigger>
-            <TabsTrigger value="setup">Setup</TabsTrigger>
+            {setupMode && <TabsTrigger value="setup">Setup</TabsTrigger>}
           </TabsList>
           <TabsContent value="todos">
             <Todos />
@@ -146,6 +194,7 @@ function Main() {
             <Setup />
           </TabsContent>
           <TabsContent value="today" className="space-y-4">
+            <DueSoon />
             <Capture compact />
             <Today />
           </TabsContent>

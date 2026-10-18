@@ -21,7 +21,7 @@ export const CONFIG = {
     authorize: "https://accounts.google.com/o/oauth2/v2/auth",
     token: "https://oauth2.googleapis.com/token",
     scope:
-      "openid email https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.calendarlist.readonly https://www.googleapis.com/auth/drive",
+      "openid email https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.calendarlist.readonly",
     clientIdName: "GOOGLE_CLIENT_ID" as SettingName,
     clientSecretName: "GOOGLE_CLIENT_SECRET" as SettingName,
   },

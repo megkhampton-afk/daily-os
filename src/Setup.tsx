@@ -343,7 +343,7 @@ export function Setup() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            Google (Calendar + Gmail + Drive){" "}
+            Google (Calendar + Gmail){" "}
             {googleReady && <Badge className="bg-green-600 hover:bg-green-600">Ready to connect</Badge>}
           </CardTitle>
           <CardDescription>
@@ -356,9 +356,8 @@ export function Setup() {
               <A href="https://console.cloud.google.com/projectcreate">Create a Google Cloud project</A> (or pick an existing one).
             </Step>
             <Step n={2}>
-              Enable the <A href="https://console.cloud.google.com/apis/library/gmail.googleapis.com">Gmail API</A>, the{" "}
-              <A href="https://console.cloud.google.com/apis/library/calendar-json.googleapis.com">Google Calendar API</A>, and the{" "}
-              <A href="https://console.cloud.google.com/apis/library/drive.googleapis.com">Google Drive API</A>.
+              Enable the <A href="https://console.cloud.google.com/apis/library/gmail.googleapis.com">Gmail API</A> and the{" "}
+              <A href="https://console.cloud.google.com/apis/library/calendar-json.googleapis.com">Google Calendar API</A>.
             </Step>
             <Step n={3}>
               Open the <A href="https://console.cloud.google.com/auth/overview">consent screen</A>, click Get started, and

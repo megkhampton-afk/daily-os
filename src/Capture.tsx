@@ -13,8 +13,8 @@ import { useSetupMode } from "@/lib/setupMode";
 
 const EXAMPLES = [
   "dinner with Sam thursday 7pm, finish 6.390 pset by friday",
-  "call Figure AI recruiter tomorrow at 2pm and buy groceries",
-  "email Prof. Tedrake about extension, robotics club build night wed 8pm",
+  "call the career center tomorrow at 2pm and buy groceries",
+  "email my advisor about an extension, robotics club build night wed 8pm",
 ];
 
 export function Capture({ compact = false }: { compact?: boolean }) {

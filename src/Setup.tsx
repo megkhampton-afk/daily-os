@@ -1,6 +1,6 @@
 import { errorMessage } from "@/lib/errors";
 import { useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
 import { api } from "../convex/_generated/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +17,102 @@ type Name =
   | "MS_CLIENT_ID"
   | "MS_CLIENT_SECRET"
   | "CANVAS_TOKEN"
-  | "CANVAS_URL";
+  | "CANVAS_URL"
+  | "APPLE_ID"
+  | "APPLE_APP_PASSWORD";
+
+function AppleCard({ isSet }: { isSet: Record<string, boolean> }) {
+  const key = getKey();
+  const status = useQuery(api.oauth.status, { key });
+  const test = useAction(api.apple.testConnection);
+  const save = useMutation(api.settings.save);
+  const [testing, setTesting] = useState(false);
+  const [calendars, setCalendars] = useState<string[] | null>(null);
+  const ready = isSet.APPLE_ID && isSet.APPLE_APP_PASSWORD;
+
+  async function runTest() {
+    setTesting(true);
+    try {
+      const r = await test({ key });
+      if (r.ok) {
+        setCalendars(r.calendars);
+        toast.success(`Connected. Found ${r.calendars.length} calendar${r.calendars.length === 1 ? "" : "s"}.`);
+      } else {
+        setCalendars(null);
+        toast.error(r.error ?? "Could not reach iCloud.");
+      }
+    } catch (e) {
+      toast.error(errorMessage(e));
+    } finally {
+      setTesting(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          Apple Calendar (iCloud) {ready && <Badge className="bg-green-600 hover:bg-green-600">Saved</Badge>}
+        </CardTitle>
+        <CardDescription>
+          About 2 minutes. No developer app needed. Captured events land on the iCloud calendar named after the course,
+          and your Schedule shows every iCloud calendar.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <ol className="space-y-3">
+          <Step n={1}>
+            Open <A href="https://account.apple.com/account/manage">your Apple Account</A> and go to{" "}
+            <b>Sign-In and Security</b>, then <b>App-Specific Passwords</b>.
+          </Step>
+          <Step n={2}>
+            Create one named <b>Daily OS</b> and copy it. (Your normal Apple password won't work here, and you can revoke
+            this one any time.)
+          </Step>
+          <Step n={3}>Paste your Apple ID email and the app-specific password below, save, then test.</Step>
+        </ol>
+        <Fields
+          isSet={isSet}
+          fields={[
+            { name: "APPLE_ID", label: "Apple ID email", placeholder: "you@icloud.com" },
+            { name: "APPLE_APP_PASSWORD", label: "App-specific password", secret: true, placeholder: "xxxx-xxxx-xxxx-xxxx" },
+          ]}
+        />
+        {ready && (
+          <Button variant="outline" disabled={testing} onClick={() => void runTest()}>
+            {testing ? "Testing..." : "Test connection"}
+          </Button>
+        )}
+        {calendars && (
+          <p className="text-sm text-muted-foreground">
+            Calendars: {calendars.length ? calendars.join(", ") : "none found"}
+          </p>
+        )}
+        {ready && status?.google && (
+          <div className="space-y-2 border-t pt-4">
+            <p className="text-sm font-medium">Capture new events to</p>
+            <div className="flex gap-2">
+              {(["google", "apple"] as const).map((p) => (
+                <Button
+                  key={p}
+                  size="sm"
+                  variant={status.captureCalendar === p ? "default" : "outline"}
+                  onClick={() =>
+                    void save({ key, values: [{ name: "CAPTURE_CALENDAR", value: p }] }).catch((e) =>
+                      toast.error(errorMessage(e)),
+                    )
+                  }
+                >
+                  {p === "google" ? "Google Calendar" : "Apple Calendar"}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 function Copy({ value }: { value: string }) {
   const [copied, setCopied] = useState(false);
@@ -290,6 +385,8 @@ export function Setup() {
           )}
         </CardContent>
       </Card>
+
+      <AppleCard isSet={s.isSet} />
 
       <Card>
         <CardHeader>

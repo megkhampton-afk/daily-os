@@ -77,18 +77,22 @@ export const deleteGoogleEvent = internalAction({
 export const markSynced = internalMutation({
   args: {
     id: v.id("events"),
+    provider: v.optional(v.union(v.literal("google"), v.literal("apple"))),
     googleEventId: v.optional(v.string()),
+    appleEventUrl: v.optional(v.string()),
     calendarId: v.optional(v.string()),
     calendarName: v.optional(v.string()),
     error: v.optional(v.string()),
   },
   returns: v.null(),
-  handler: async (ctx, { id, googleEventId, calendarId, calendarName, error }) => {
+  handler: async (ctx, { id, provider, googleEventId, appleEventUrl, calendarId, calendarName, error }) => {
     const ev = await ctx.db.get(id);
     if (!ev) return null;
     await ctx.db.patch(id, {
-      calendarSynced: !!googleEventId,
+      calendarSynced: !!(googleEventId || appleEventUrl),
+      provider: provider ?? (googleEventId ? "google" : undefined),
       googleEventId,
+      appleEventUrl,
       calendarId,
       calendarName,
       syncError: error,

@@ -79,7 +79,8 @@ export function Schedule() {
     try {
       const a = dayBounds(0);
       const b = dayBounds(3);
-      setData(await fetchRange({ key, start: a.start, end: b.start }));
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      setData(await fetchRange({ key, start: a.start, end: b.start, tz }));
     } catch (e) {
       setData({ connected: true, events: [], error: errorMessage(e) });
     } finally {
@@ -124,7 +125,7 @@ export function Schedule() {
             <CardTitle>{day.date.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" })}</CardTitle>
             <CardDescription>
               {data?.connected === false
-                ? "Connect Google on the Email triage tab to see your calendar."
+                ? "Connect Google or Apple Calendar on the Setup tab to see your calendar."
                 : `${timed.length} event${timed.length === 1 ? "" : "s"} Â· ${duration(totalFree)} free between ${DAY_START_HOUR} am and ${DAY_END_HOUR - 12} pm`}
             </CardDescription>
           </div>

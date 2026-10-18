@@ -20,7 +20,7 @@ function cleanTitle(line: string, dateMatches: ReturnType<typeof chrono.parse>) 
     .replace(/^\s*(?:[-–—*•▪◦‣]+|\d+[.)])\s*/u, "")
     .replace(/\bdue\b(?:\s+(?:on|by))?\s*[:\-–—]?\s*/gi, " ")
     .replace(/\s*[:;]\s*/g, " ")
-    .replace(/^[\s\-–—*•▪◦‣|]+|[\s\-–—*•▪◦‣|]+$/gu, "")
+    .replace(/^[\s\-–—*•▪◦‣|]+|[\s,\-–—*•▪◦‣|]+$/gu, "")
     .replace(/\s+/g, " ")
     .trim();
 

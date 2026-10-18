@@ -8,7 +8,9 @@
  * @module
  */
 
+import type * as apple from "../apple.js";
 import type * as assignments from "../assignments.js";
+import type * as caldav from "../caldav.js";
 import type * as calendar from "../calendar.js";
 import type * as calendarMatch from "../calendarMatch.js";
 import type * as capture from "../capture.js";
@@ -30,7 +32,9 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  apple: typeof apple;
   assignments: typeof assignments;
+  caldav: typeof caldav;
   calendar: typeof calendar;
   calendarMatch: typeof calendarMatch;
   capture: typeof capture;

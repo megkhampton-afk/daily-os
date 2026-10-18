@@ -56,12 +56,14 @@ export function Today() {
         <CardHeader>
           <CardTitle>Upcoming events</CardTitle>
           <CardDescription>
-            {status?.google ? (
+            {status?.captureCalendar === "google" ? (
               `Syncing automatically to ${status.google}'s Google Calendar`
+            ) : status?.captureCalendar === "apple" ? (
+              "Syncing automatically to your Apple Calendar"
             ) : setupMode ? (
               <>
                 <a href="#setup" className="underline">
-                  Connect Google
+                  Connect Google or Apple Calendar
                 </a>{" "}
                 to sync events to your calendar automatically
               </>
@@ -84,11 +86,11 @@ export function Today() {
               <div className="ml-auto">
                 {e.calendarSynced ? (
                   <Badge className="bg-green-600 hover:bg-green-600">
-                    On {e.calendarName ?? "Google Calendar"}
+                    On {e.calendarName ?? (e.provider === "apple" ? "Apple Calendar" : "Google Calendar")}
                   </Badge>
                 ) : e.syncError ? (
                   <Badge variant="destructive" title={e.syncError}>Sync failed</Badge>
-                ) : status?.google ? (
+                ) : status?.captureCalendar ? (
                   <Badge variant="outline">Syncing...</Badge>
                 ) : (
                   <Badge variant="outline">Not synced</Badge>

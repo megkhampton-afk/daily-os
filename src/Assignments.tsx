@@ -34,12 +34,12 @@ function sampleSyllabus() {
     });
   };
 
-  return `• Problem Set 3: Linear models — Due ${dateAfter(7)}
-• Reading response: Generalization and overfitting — Due ${dateAfter(14)}
-• Lab 2: Gradient descent — Due ${dateAfter(21)}
-• Quiz 1: Probability review — Due ${dateAfter(30)}
-• Project proposal: Learning from data — Due ${dateAfter(39)}
-• Midterm exam — Due ${dateAfter(50)}`;
+  return `• Problem Set 3: Linear models, due ${dateAfter(7)}
+• Reading response: Generalization and overfitting, due ${dateAfter(14)}
+• Lab 2: Gradient descent, due ${dateAfter(21)}
+• Quiz 1: Probability review, due ${dateAfter(30)}
+• Project proposal: Learning from data, due ${dateAfter(39)}
+• Midterm exam, due ${dateAfter(50)}`;
 }
 
 export function Assignments() {

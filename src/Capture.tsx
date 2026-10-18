@@ -38,7 +38,7 @@ export function Capture({ compact = false }: { compact?: boolean }) {
       <CardHeader>
         <CardTitle>Quick capture</CardTitle>
         <CardDescription>
-          Type it like a text. Anything with a time goes straight onto your Google Calendar. Everything else goes on your to-do list.
+          Type it like a text. Anything with a time goes straight onto your calendar. Everything else goes on your to-do list.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">

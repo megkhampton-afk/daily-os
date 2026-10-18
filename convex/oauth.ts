@@ -8,7 +8,7 @@ import {
 } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { provider } from "./schema";
-import { checkKey, keyArg, readSetting, SettingName } from "./key";
+import { appleConfigured, captureCalendar, checkKey, keyArg, readSetting, SettingName } from "./key";
 
 type Provider = "google" | "microsoft";
 
@@ -45,6 +45,8 @@ export const status = query({
       microsoft: find("microsoft"),
       googleConfigured: !!(await readSetting(ctx, "GOOGLE_CLIENT_ID")) && !!(await readSetting(ctx, "GOOGLE_CLIENT_SECRET")),
       microsoftConfigured: !!(await readSetting(ctx, "MS_CLIENT_ID")) && !!(await readSetting(ctx, "MS_CLIENT_SECRET")),
+      apple: (await appleConfigured(ctx)) ? ((await readSetting(ctx, "APPLE_ID")) ?? null) : null,
+      captureCalendar: await captureCalendar(ctx),
     };
   },
 });

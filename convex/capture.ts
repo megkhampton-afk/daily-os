@@ -1,7 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
-import { checkKey, keyArg } from "./key";
+import { captureCalendar, checkKey, keyArg } from "./key";
 
 export const addItems = mutation({
   args: {
@@ -15,14 +15,13 @@ export const addItems = mutation({
     for (const t of tasks) {
       await ctx.db.insert("tasks", { ...t, done: false, source: "capture" });
     }
-    const google = await ctx.db
-      .query("oauthTokens")
-      .withIndex("by_provider", (q) => q.eq("provider", "google"))
-      .first();
+    const target = await captureCalendar(ctx);
     for (const e of events) {
       const id = await ctx.db.insert("events", { title: e.title, start: e.start, calendarSynced: false });
-      if (google) {
+      if (target === "google") {
         await ctx.scheduler.runAfter(0, internal.calendar.createGoogleEvent, { id, ...e });
+      } else if (target === "apple") {
+        await ctx.scheduler.runAfter(0, internal.apple.createAppleEvent, { id, ...e });
       }
     }
     return null;
@@ -112,6 +111,9 @@ export const deleteEvent = mutation({
         googleEventId: ev.googleEventId,
         calendarId: ev.calendarId,
       });
+    }
+    if (ev.appleEventUrl) {
+      await ctx.scheduler.runAfter(0, internal.apple.deleteAppleEvent, { url: ev.appleEventUrl });
     }
     await ctx.db.delete(id);
     return null;

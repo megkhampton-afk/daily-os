@@ -12,6 +12,9 @@ export const SETTING_NAMES = [
   "MS_CLIENT_SECRET",
   "CANVAS_TOKEN",
   "CANVAS_URL",
+  "APPLE_ID",
+  "APPLE_APP_PASSWORD",
+  "CAPTURE_CALENDAR",
 ] as const;
 export type SettingName = (typeof SETTING_NAMES)[number];
 
@@ -38,6 +41,23 @@ export const getSetting = internalQuery({
     return (await readSetting(ctx, name as SettingName)) ?? null;
   },
 });
+
+export async function appleConfigured(ctx: AnyCtx) {
+  return !!(await readSetting(ctx, "APPLE_ID")) && !!(await readSetting(ctx, "APPLE_APP_PASSWORD"));
+}
+
+/** Where captured events go: the saved preference if that calendar is set up, else Google, else Apple. */
+export async function captureCalendar(ctx: QueryCtx | MutationCtx): Promise<"google" | "apple" | null> {
+  const google = !!(await ctx.db
+    .query("oauthTokens")
+    .withIndex("by_provider", (q) => q.eq("provider", "google"))
+    .first());
+  const apple = await appleConfigured(ctx);
+  const pref = await readSetting(ctx, "CAPTURE_CALENDAR");
+  if (pref === "apple" && apple) return "apple";
+  if (pref === "google" && google) return "google";
+  return google ? "google" : apple ? "apple" : null;
+}
 
 // Single-user app with no login: every public function must check the
 // passcode because the Convex URL is public in the frontend bundle.

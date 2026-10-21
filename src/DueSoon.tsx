@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { daysUntil, dueLabel } from "@/lib/due";
 import { getKey } from "@/lib/key";
 import { cn } from "@/lib/utils";
+import { gradescopeUrl } from "@/lib/gradescope";
 
 const WINDOW_DAYS = 7;
 
@@ -38,10 +39,6 @@ export function DueSoon() {
         .map((a) => ({ ...a, days: daysUntil(a.due!) })),
     [assignments],
   );
-  const gradescope = useMemo(
-    () => new Map((courses ?? []).map((c) => [c.code, c.gradescopeUrl])),
-    [courses],
-  );
 
   if (assignments === undefined) return null;
 
@@ -70,13 +67,11 @@ export function DueSoon() {
                 </a>
               </Button>
             )}
-            {(next.gradescopeUrl ?? gradescope.get(next.course)) && (
               <Button size="sm" asChild>
-                <a href={next.gradescopeUrl ?? gradescope.get(next.course)} target="_blank" rel="noreferrer">
-                  <ExternalLinkIcon className="mr-1.5" /> Turn in
+                <a href={gradescopeUrl(next, courses ?? []) ?? "https://www.gradescope.com/"} target="_blank" rel="noreferrer">
+                  <ExternalLinkIcon className="mr-1.5" /> {gradescopeUrl(next, courses ?? []) ? "Turn in on Gradescope" : "Open Gradescope"}
                 </a>
               </Button>
-            )}
           </div>
           {rest.length > 0 && (
             <ul className="space-y-1 border-t pt-3">

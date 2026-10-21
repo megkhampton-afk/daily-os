@@ -3,6 +3,7 @@ import { internalAction, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { google } from "./mailApi";
 import { pickCalendar } from "./calendarMatch";
+import { calendarItems } from "./googleCalendar";
 
 const CAL = "https://www.googleapis.com/calendar/v3";
 
@@ -11,9 +12,9 @@ async function chooseCalendar(
   text: string,
 ): Promise<{ id: string; name: string } | null> {
   try {
-    const { items } = (await google(ctx, `${CAL}/users/me/calendarList?minAccessRole=writer`)) as {
-      items: { id: string; summary: string; summaryOverride?: string; primary?: boolean }[];
-    };
+    const items = await calendarItems<{
+      id: string; summary: string; summaryOverride?: string; primary?: boolean;
+    }>(ctx, `${CAL}/users/me/calendarList?minAccessRole=writer`);
     const options = items
       .filter((c) => !c.primary)
       .map((c) => ({ id: c.id, name: c.summaryOverride ?? c.summary }));

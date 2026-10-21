@@ -106,7 +106,7 @@ function ProviderFolders({ provider, account }: { provider: Provider; account: s
       </form>
       {chosen.length > 0 && (
         <p className="text-xs text-muted-foreground">
-          Sorting order: {chosen.map((f, i) => `${i + 1} ${f.name}`).join(" Â· ")}
+          Sorting order: {chosen.map((f, i) => `${i + 1} ${f.name}`).join(" · ")}
         </p>
       )}
     </div>

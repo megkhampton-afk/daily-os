@@ -1,17 +1,16 @@
 import { useSyncExternalStore } from "react";
 
 // Setup mode shows configuration tools (Setup tab, syllabus catcher, hints).
-// Off gives the clean everyday dashboard. Stored per browser; on by default
-// so a brand-new copy opens with its setup tools visible.
-const STORAGE = "daily-os-setup-mode";
+// Every app launch starts with the clean everyday dashboard.
+let setupMode = false;
 const EVENT = "daily-os-setup-mode-change";
 
 export function isSetupMode() {
-  return localStorage.getItem(STORAGE) !== "off";
+  return setupMode;
 }
 
 export function setSetupMode(on: boolean) {
-  localStorage.setItem(STORAGE, on ? "on" : "off");
+  setupMode = on;
   window.dispatchEvent(new Event(EVENT));
 }
 

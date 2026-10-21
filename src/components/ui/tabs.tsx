@@ -13,7 +13,7 @@ const TabsList = React.forwardRef<
     className={cn(
       "inline-flex h-9 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground",
       // On phones the tab bar scrolls horizontally so all tabs fit.
-      "no-scrollbar w-full gap-1 overflow-x-auto sm:w-auto sm:justify-center",
+      "no-scrollbar w-full justify-start gap-1 overflow-x-auto sm:w-auto sm:justify-center",
       className,
     )}
     {...props}

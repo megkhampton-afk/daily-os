@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { api } from "../convex/_generated/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DownloadIcon, ExternalLinkIcon } from "@radix-ui/react-icons";
+import { ExternalLinkIcon } from "@radix-ui/react-icons";
 import {
   Card,
   CardContent,
@@ -20,6 +20,8 @@ import { findMissing, parseSyllabus, type SyllabusItem } from "@/lib/syllabus";
 import { calendarDay, dueLabel } from "@/lib/due";
 import { errorMessage } from "@/lib/errors";
 import { useSetupMode } from "@/lib/setupMode";
+import { GradescopeLinks } from "@/GradescopeLinks";
+import { gradescopeUrl } from "@/lib/gradescope";
 
 type PreviewItem = SyllabusItem & { missing: boolean };
 
@@ -97,19 +99,9 @@ export function Assignments() {
     [assignments],
   );
 
-  const courseMap = useMemo(
-    () => new Map((courses ?? []).map((c) => [c.code, c])),
-    [courses],
-  );
-
   const unlinkedCourses = useMemo(() => {
     if (assignments === undefined) return [];
-    const linked = new Set(
-      (courses ?? []).filter((c) => c.gradescopeUrl).map((c) => c.code),
-    );
-    return [...new Set(assignments.map((a) => a.course))].filter(
-      (code) => !linked.has(code),
-    );
+    return [...new Set(assignments.filter((a) => !gradescopeUrl(a, courses ?? [])).map((a) => a.course))];
   }, [assignments, courses]);
 
   async function handleSync() {
@@ -177,10 +169,14 @@ export function Assignments() {
             <CardDescription>
               Keep track of what’s due across your courses.
             </CardDescription>
-            {setupMode && unlinkedCourses.length > 0 && (
+            {unlinkedCourses.length > 0 && (
               <p className="text-xs text-muted-foreground">
                 Add{" "}
-                <a className="underline underline-offset-2" href="#setup">
+                <a className="underline underline-offset-2" href="#gradescope-links" onClick={(event) => {
+                  event.preventDefault();
+                  const details = document.getElementById("gradescope-links") as HTMLDetailsElement | null;
+                  if (details) { details.open = true; details.scrollIntoView({ behavior: "smooth" }); }
+                }}>
                   Gradescope links
                 </a>{" "}
                 for {unlinkedCourses.slice(0, 3).join(", ")}
@@ -198,7 +194,21 @@ export function Assignments() {
             {syncing ? "Syncing…" : "Sync Canvas"}
           </Button>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-5">
+          <div className="flex flex-wrap items-center gap-3 rounded-md border p-3">
+            <Button size="sm" asChild>
+              <a href="https://www.gradescope.com/" target="_blank" rel="noreferrer">
+                <ExternalLinkIcon className="mr-1.5" /> Open Gradescope
+              </a>
+            </Button>
+            <p className="text-xs text-muted-foreground">Submit work on Gradescope. Link a course below for a direct course shortcut.</p>
+          </div>
+          <details id="gradescope-links">
+            <summary className="cursor-pointer text-sm font-medium">Set up or edit Gradescope course links</summary>
+            <div className="mt-3">
+              <GradescopeLinks courseOptions={[...new Set((assignments ?? []).map((a) => a.course))]} />
+            </div>
+          </details>
           {assignments === undefined ? (
             <p className="py-6 text-sm text-muted-foreground">
               Loading assignments…
@@ -225,9 +235,7 @@ export function Assignments() {
                   ) : (
                     <ul className="space-y-1">
                       {bucket.items.map((item) => {
-                        const turnInUrl =
-                          item.gradescopeUrl ??
-                          courseMap.get(item.course)?.gradescopeUrl;
+                        const turnInUrl = gradescopeUrl(item, courses ?? []);
                         return (
                         <li
                           key={item._id}
@@ -274,8 +282,7 @@ export function Assignments() {
                             <p className="mt-1 text-xs text-muted-foreground">
                               {dueLabel(item.due)}
                             </p>
-                            {(item.url || turnInUrl) && (
-                              <div className="mt-1.5 flex flex-wrap gap-2">
+                            <div className="mt-1.5 flex flex-wrap gap-2">
                                 {item.url && (
                                   <Button
                                     size="sm"
@@ -284,23 +291,20 @@ export function Assignments() {
                                     asChild
                                   >
                                     <a href={item.url} target="_blank" rel="noreferrer">
-                                      <DownloadIcon className="mr-1.5" /> Download
+                                      <ExternalLinkIcon className="mr-1.5" /> Open assignment
                                     </a>
                                   </Button>
                                 )}
-                                {turnInUrl && (
                                   <Button
                                     size="sm"
                                     className="h-10 px-4 sm:h-8 sm:px-3"
                                     asChild
                                   >
-                                    <a href={turnInUrl} target="_blank" rel="noreferrer">
-                                      <ExternalLinkIcon className="mr-1.5" /> Turn in
+                                    <a href={turnInUrl ?? "https://www.gradescope.com/"} target="_blank" rel="noreferrer">
+                                      <ExternalLinkIcon className="mr-1.5" /> {turnInUrl ? "Turn in on Gradescope" : "Open Gradescope"}
                                     </a>
                                   </Button>
-                                )}
-                              </div>
-                            )}
+                            </div>
                           </div>
                         </li>
                         );

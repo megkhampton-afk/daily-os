@@ -1,4 +1,5 @@
 import { errorMessage } from "@/lib/errors";
+import { GradescopeLinks } from "@/GradescopeLinks";
 import { useState } from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
@@ -209,97 +210,6 @@ function Fields({
   );
 }
 
-function CourseLinksCard() {
-  const key = getKey();
-  const courses = useQuery(api.courses.list, { key });
-  const save = useMutation(api.courses.save);
-  const remove = useMutation(api.courses.remove);
-  const [code, setCode] = useState("");
-  const [link, setLink] = useState("");
-  const [saving, setSaving] = useState(false);
-
-  async function submit() {
-    if (!code.trim()) return;
-    setSaving(true);
-    try {
-      await save({ key, code, gradescopeUrl: link });
-      setCode("");
-      setLink("");
-      toast.success("Course link saved");
-    } catch (e) {
-      toast.error(errorMessage(e));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Course links (Gradescope)</CardTitle>
-        <CardDescription>
-          Link each course code to its Gradescope page and its assignments get a one-tap Turn in
-          button.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {courses === undefined ? (
-          <p className="text-sm text-muted-foreground">Loadingâ€¦</p>
-        ) : courses.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No courses yet. Use the exact course code shown on assignments (for example 6.390).
-          </p>
-        ) : (
-          <ul className="space-y-2">
-            {courses.map((c) => (
-              <li key={c._id} className="flex items-center gap-2 rounded-md border px-3 py-2">
-                <Badge variant="outline" className="shrink-0">{c.code}</Badge>
-                {c.gradescopeUrl ? (
-                  <a
-                    href={c.gradescopeUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="min-w-0 flex-1 truncate text-xs underline underline-offset-2"
-                  >
-                    {c.gradescopeUrl}
-                  </a>
-                ) : (
-                  <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">No link yet</span>
-                )}
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="shrink-0"
-                  onClick={() => void remove({ key, id: c._id }).catch(() => toast.error("Couldn't remove that course."))}
-                >
-                  Remove
-                </Button>
-              </li>
-            ))}
-          </ul>
-        )}
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Input
-            className="sm:w-32"
-            placeholder="6.390"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-          />
-          <Input
-            className="flex-1"
-            placeholder="https://www.gradescope.com/courses/â€¦"
-            value={link}
-            onChange={(e) => setLink(e.target.value)}
-          />
-        </div>
-        <Button disabled={!code.trim() || saving} onClick={() => void submit()}>
-          {saving ? "Saving..." : "Save course link"}
-        </Button>
-      </CardContent>
-    </Card>
-  );
-}
-
 export function Setup() {
   const key = getKey();
   const s = useQuery(api.settings.status, { key });
@@ -338,7 +248,7 @@ export function Setup() {
         </CardContent>
       </Card>
 
-      <CourseLinksCard />
+      <GradescopeLinks />
 
       <Card>
         <CardHeader>
@@ -394,7 +304,7 @@ export function Setup() {
             {msReady && <Badge className="bg-green-600 hover:bg-green-600">Ready to connect</Badge>}
           </CardTitle>
           <CardDescription>
-            Optional. Some schools block personal apps; if you see "Need admin approval", forward school mail to Gmail instead.
+            Optional. Some schools block personal apps. If you see "Need admin approval", ask your IT team or use an account your institution permits.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

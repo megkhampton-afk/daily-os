@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { getKey } from "@/lib/key";
 import { Connections } from "@/Connections";
 import { Button } from "@/components/ui/button";
+import { ExternalLinkIcon, TrashIcon } from "@radix-ui/react-icons";
+import { mailLink } from "@/lib/mailLink";
 import {
   Card,
   CardContent,
@@ -49,8 +51,10 @@ export function EmailTriage() {
   const inboxResult = useQuery(api.emails.inbox, { key });
   const folderCounts = useQuery(api.emails.folderCounts, { key });
   const moveToFolder = useMutation(api.emails.moveToFolder);
+  const trashEmail = useMutation(api.emails.trash);
   const undoMove = useMutation(api.emails.undoMove);
   const selectedFolders = useQuery(api.folders.selected, { key });
+  const accounts = useQuery(api.oauth.status, { key });
   const [isMoving, setIsMoving] = useState(false);
 
   const emails = inboxResult ?? [];
@@ -60,14 +64,15 @@ export function EmailTriage() {
     .slice(0, 9);
 
   const moveCurrentEmail = useCallback(
-    async (folder: (typeof FOLDERS)[number]) => {
+    async (folder: (typeof FOLDERS)[number] | null) => {
       if (!currentEmail || isMoving) return;
 
       const emailId = currentEmail._id;
       setIsMoving(true);
       try {
-        await moveToFolder({ key, id: emailId, folderId: folder._id });
-        toast.success(`Moved to ${folder.name}`, {
+        if (folder) await moveToFolder({ key, id: emailId, folderId: folder._id });
+        else await trashEmail({ key, id: emailId });
+        toast.success(`Moved to ${folder?.name ?? "Trash"} and marked as read`, {
           action: {
             label: "Undo",
             onClick: () => {
@@ -83,7 +88,7 @@ export function EmailTriage() {
         setIsMoving(false);
       }
     },
-    [currentEmail, isMoving, key, moveToFolder, undoMove],
+    [currentEmail, isMoving, key, moveToFolder, trashEmail, undoMove],
   );
 
   useEffect(() => {
@@ -98,7 +103,7 @@ export function EmailTriage() {
       if (event.altKey || event.ctrlKey || event.metaKey) return;
 
       const shortcut = Number(event.key);
-      if (shortcut < 1 || shortcut > FOLDERS.length || !currentEmail) return;
+      if (!Number.isInteger(shortcut) || shortcut < 1 || shortcut > FOLDERS.length || !currentEmail) return;
 
       event.preventDefault();
       void moveCurrentEmail(FOLDERS[shortcut - 1]);
@@ -120,8 +125,9 @@ export function EmailTriage() {
             Make room for what matters.
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Sort each message into a folder and keep moving.
+            Sort each message into a folder or Trash. Sorted messages are marked as read.
           </p>
+          <p className="mt-1 text-xs text-muted-foreground">Sync loads up to 100 emails per account. Click a message to open it in your mailbox.</p>
         </div>
         {inboxResult !== undefined && (
           <Badge variant="secondary" className="rounded-full px-3 py-1">
@@ -141,6 +147,13 @@ export function EmailTriage() {
       ) : currentEmail ? (
         <>
           <Card className="overflow-hidden rounded-2xl border-border/80 shadow-sm">
+            <a
+              href={mailLink(currentEmail, accounts?.google)}
+              target="_blank"
+              rel="noreferrer"
+              className="block rounded-t-2xl transition-colors hover:bg-muted/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+              aria-label={`Open ${currentEmail.subject} in ${currentEmail.provider === "google" ? "Gmail" : "Outlook"}`}
+            >
             <CardHeader className="gap-5 p-6 sm:p-8">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex min-w-0 items-center gap-3">
@@ -164,7 +177,11 @@ export function EmailTriage() {
               <p className="text-sm leading-7 text-muted-foreground sm:text-base">
                 {currentEmail.snippet}
               </p>
+              <span className="inline-flex items-center gap-1 text-sm font-medium text-primary">
+                Open in {currentEmail.provider === "google" ? "Gmail" : "Outlook"} <ExternalLinkIcon />
+              </span>
             </CardHeader>
+            </a>
             <CardContent className="border-t bg-muted/20 p-6 sm:p-8">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <p className="text-sm font-medium">Move to</p>
@@ -206,6 +223,17 @@ export function EmailTriage() {
                     </Badge>
                   </Button>
                 ))}
+                <Button
+                  type="button"
+                  variant="destructive"
+                  disabled={isMoving}
+                  onClick={() => void moveCurrentEmail(null)}
+                  className="h-auto min-h-12 justify-between gap-2 px-3 py-2"
+                  aria-label="Move to Trash and mark as read"
+                >
+                  <span className="flex items-center gap-2"><TrashIcon />Trash</span>
+                  <Badge variant="secondary">{folderCounts?.Trash ?? 0}</Badge>
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -223,8 +251,14 @@ export function EmailTriage() {
                   {emails.slice(1, 4).map((email) => (
                     <li
                       key={email._id}
-                      className="flex items-start justify-between gap-4 px-5 py-4"
                     >
+                      <a
+                        href={mailLink(email, accounts?.google)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-start justify-between gap-4 px-5 py-4 hover:bg-muted/50"
+                        aria-label={`Open ${email.subject} in ${email.provider === "google" ? "Gmail" : "Outlook"}`}
+                      >
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium">
                           {email.from}
@@ -239,6 +273,7 @@ export function EmailTriage() {
                       <time className="shrink-0 pt-0.5 text-xs text-muted-foreground">
                         {relativeTime(email.receivedAt)}
                       </time>
+                      </a>
                     </li>
                   ))}
                 </ul>

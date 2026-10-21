@@ -1,6 +1,6 @@
 import { errorMessage } from "@/lib/errors";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useAction } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { ReloadIcon } from "@radix-ui/react-icons";
 import { getKey } from "@/lib/key";
 import { cn } from "@/lib/utils";
+import { visibleEvents } from "@/lib/calendarVisibility";
+import { toast } from "sonner";
 
 type Ev = {
   id: string;
@@ -16,6 +18,7 @@ type Ev = {
   end: number;
   allDay: boolean;
   calendar: string;
+  calendarId?: string;
   color?: string;
   location?: string;
 };
@@ -70,8 +73,16 @@ function freeBlocks(events: Ev[], dayStart: number) {
 export function Schedule() {
   const key = getKey();
   const fetchRange = useAction(api.schedule.range);
+  const hiddenIds = useQuery(api.calendarVisibility.hidden, { key });
+  const setVisible = useMutation(api.calendarVisibility.setVisible);
+  const [savingCalendar, setSavingCalendar] = useState(false);
   const [offset, setOffset] = useState(1);
-  const [data, setData] = useState<{ connected: boolean; events: Ev[]; error?: string } | null>(null);
+  const [data, setData] = useState<{
+    connected: boolean;
+    events: Ev[];
+    calendars?: { id: string; name: string; color?: string }[];
+    error?: string;
+  } | null>(null);
   const [loading, setLoading] = useState(false);
 
   const load = useCallback(async () => {
@@ -94,14 +105,25 @@ export function Schedule() {
 
   const day = dayBounds(offset);
   const { allDay, timed, free } = useMemo(() => {
-    const events = data?.events ?? [];
+    const events = visibleEvents(data?.events ?? [], hiddenIds ?? []);
     const ymd = ymdLocal(day.date);
     const allDay = events.filter((e) => e.allDay && ymdUtc(e.start) <= ymd && ymd < ymdUtc(e.end));
     const timed = events.filter((e) => !e.allDay && e.end > day.start && e.start < day.end);
-    return { allDay, timed, free: freeBlocks(timed, day.start) };
+    return { allDay, timed, free: data?.connected && !data.error && hiddenIds !== undefined ? freeBlocks(timed, day.start) : [] };
     // day is derived from offset
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, offset]);
+  }, [data, offset, hiddenIds]);
+
+  async function toggleCalendar(calendarId: string, visible: boolean) {
+    setSavingCalendar(true);
+    try {
+      await setVisible({ key, calendarId, visible });
+    } catch (error) {
+      toast.error(errorMessage(error));
+    } finally {
+      setSavingCalendar(false);
+    }
+  }
 
   const totalFree = free.reduce((s, f) => s + (f.end - f.start), 0);
   const rows = [
@@ -126,7 +148,11 @@ export function Schedule() {
             <CardDescription>
               {data?.connected === false
                 ? "Connect Google or Apple Calendar on the Setup tab to see your calendar."
-                : `${timed.length} event${timed.length === 1 ? "" : "s"} Â· ${duration(totalFree)} free between ${DAY_START_HOUR} am and ${DAY_END_HOUR - 12} pm`}
+                : data?.error
+                ? "Calendar data is incomplete. Free time is unavailable until the connection is fixed."
+                : !data
+                ? "Loading your calendar..."
+                : `${timed.length} event${timed.length === 1 ? "" : "s"} · ${duration(totalFree)} free between ${DAY_START_HOUR} am and ${DAY_END_HOUR - 12} pm`}
             </CardDescription>
           </div>
           <div className="flex items-center gap-1">
@@ -140,6 +166,32 @@ export function Schedule() {
             </Button>
           </div>
         </div>
+        {!!data?.calendars?.length && (
+          <details className="rounded-md border px-3 py-2 text-sm">
+            <summary className="cursor-pointer font-medium">Choose calendars</summary>
+            <p className="my-2 text-xs text-muted-foreground">
+              Uncheck calendars you do not attend. Hidden calendars do not block free time.
+              This is saved across your devices and does not change Google Calendar or automatic event routing.
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {data.calendars.map((calendar) => (
+                <label key={calendar.id} className="flex items-center gap-2 py-1">
+                  <input
+                    type="checkbox"
+                    checked={!hiddenIds?.includes(calendar.id)}
+                    disabled={hiddenIds === undefined || savingCalendar}
+                    onChange={(event) => void toggleCalendar(calendar.id, event.target.checked)}
+                  />
+                  <span
+                    className="h-2 w-2 shrink-0 rounded-full"
+                    style={{ background: calendar.color ?? "hsl(var(--primary))" }}
+                  />
+                  {calendar.name}
+                </label>
+              ))}
+            </div>
+          </details>
+        )}
         {data?.connected !== false && (
           <div>
             <div className="relative h-6 overflow-hidden rounded-md bg-emerald-500/15">
@@ -152,7 +204,7 @@ export function Schedule() {
                     width: `calc(${pct(e.end)} - ${pct(e.start)})`,
                     background: e.color ?? "hsl(var(--primary))",
                   }}
-                  title={`${e.title} ${fmt(e.start)}â€“${fmt(e.end)}`}
+                  title={`${e.title} ${fmt(e.start)}–${fmt(e.end)}`}
                 />
               ))}
             </div>
@@ -165,7 +217,14 @@ export function Schedule() {
         )}
       </CardHeader>
       <CardContent className="space-y-2">
-        {data?.error && <p className="text-sm text-destructive">{data.error}</p>}
+        {data?.error && (
+          <div className="space-y-2">
+            <p className="text-sm text-destructive">{data.error}</p>
+            <Button size="sm" variant="outline" asChild>
+              <a href="#email">Manage connections / reconnect Google</a>
+            </Button>
+          </div>
+        )}
         {!data && <p className="text-sm text-muted-foreground">Loading your calendar...</p>}
         {allDay.map((e) => (
           <div key={e.id} className="flex items-center gap-2 rounded-md border border-dashed px-3 py-1.5 text-sm">
@@ -174,7 +233,7 @@ export function Schedule() {
             <span className="ml-auto text-xs text-muted-foreground">{e.calendar}</span>
           </div>
         ))}
-        {data?.connected && rows.length === 0 && (
+        {data?.connected && !data.error && rows.length === 0 && (
           <p className="text-sm text-muted-foreground">Nothing scheduled. The whole day is free.</p>
         )}
         {rows.map((r) =>
@@ -182,13 +241,13 @@ export function Schedule() {
             <div key={r.e.id} className="flex gap-3 rounded-md border px-3 py-2">
               <div className="w-1 shrink-0 rounded-full" style={{ background: r.e.color ?? "hsl(var(--primary))" }} />
               <div className="w-24 shrink-0 text-xs leading-5 text-muted-foreground">
-                {fmt(r.e.start)}â€“{fmt(r.e.end)}
+                {fmt(r.e.start)}–{fmt(r.e.end)}
               </div>
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium">{r.e.title}</p>
                 <p className="truncate text-xs text-muted-foreground">
                   {r.e.calendar}
-                  {r.e.location ? ` Â· ${r.e.location}` : ""}
+                  {r.e.location ? ` · ${r.e.location}` : ""}
                 </p>
               </div>
             </div>
@@ -201,9 +260,9 @@ export function Schedule() {
             >
               <div className="w-1 shrink-0" />
               <div className="w-24 shrink-0 text-xs leading-5">
-                {fmt(r.f.start)}â€“{fmt(r.f.end)}
+                {fmt(r.f.start)}–{fmt(r.f.end)}
               </div>
-              <p className="text-sm font-medium">Free Â· {duration(r.f.end - r.f.start)}</p>
+              <p className="text-sm font-medium">Free · {duration(r.f.end - r.f.start)}</p>
             </div>
           ),
         )}

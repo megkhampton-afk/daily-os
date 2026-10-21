@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Setup } from "@/Setup";
 import { Schedule } from "@/Schedule";
 
-const TABS = ["today", "todos", "schedule", "assignments", "email", "setup"];
+const TABS = ["today", "todos", "schedule", "assignments", "email", "notes", "setup"];
 import { api } from "../convex/_generated/api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,8 @@ import { DueSoon } from "@/DueSoon";
 import { SetupSwitch } from "@/components/SetupSwitch";
 import { errorMessage } from "@/lib/errors";
 import { isSetupMode, setSetupMode, useSetupMode } from "@/lib/setupMode";
+import { Notes } from "@/Notes";
+import { DailyQuote } from "@/DailyQuote";
 
 function useHash() {
   const [hash, setHash] = useState(window.location.hash);
@@ -166,9 +168,7 @@ function Main() {
               {greeting}
               {name ? `, ${name}` : ""}
             </h1>
-            <p className="text-muted-foreground">
-              {new Date().toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })} · Everything in one place.
-            </p>
+            <DailyQuote />
           </div>
           <div className="flex items-center gap-3">
             <SetupSwitch on={setupMode} onChange={toggleSetup} />
@@ -182,6 +182,7 @@ function Main() {
             <TabsTrigger value="schedule">Schedule</TabsTrigger>
             <TabsTrigger value="assignments">Assignments</TabsTrigger>
             <TabsTrigger value="email">Email triage</TabsTrigger>
+            <TabsTrigger value="notes">Notes</TabsTrigger>
             {setupMode && <TabsTrigger value="setup">Setup</TabsTrigger>}
           </TabsList>
           <TabsContent value="todos">
@@ -203,6 +204,9 @@ function Main() {
           </TabsContent>
           <TabsContent value="email">
             <EmailTriage />
+          </TabsContent>
+          <TabsContent value="notes" forceMount className="data-[state=inactive]:hidden">
+            <Notes />
           </TabsContent>
         </Tabs>
       </div>

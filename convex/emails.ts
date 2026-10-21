@@ -12,6 +12,8 @@ import { Doc } from "./_generated/dataModel";
 import { provider } from "./schema";
 import { checkKey, keyArg } from "./key";
 import { gmail, graph } from "./mailApi";
+import { moveMail } from "./mailMove";
+import { EMAIL_BATCH_SIZE, mapMailBatch } from "./mailBatch";
 
 export const inbox = query({
   args: keyArg,
@@ -19,9 +21,10 @@ export const inbox = query({
     await checkKey(ctx, key);
     const rows = await ctx.db
       .query("emails")
-      .withIndex("by_folder", (q) => q.eq("folder", undefined))
-      .take(100);
-    return rows.sort((a, b) => b.receivedAt - a.receivedAt);
+      .withIndex("by_folder_and_receivedAt", (q) => q.eq("folder", undefined))
+      .order("desc")
+      .take(EMAIL_BATCH_SIZE * 2);
+    return rows;
   },
 });
 
@@ -74,6 +77,24 @@ export const undoMove = mutation({
   },
 });
 
+export const trash = mutation({
+  args: { ...keyArg, id: v.id("emails") },
+  returns: v.null(),
+  handler: async (ctx, { key, id }) => {
+    await checkKey(ctx, key);
+    const email = await ctx.db.get(id);
+    if (!email || email.folder) return null;
+    const destination = email.provider === "google" ? "TRASH" : "deleteditems";
+    await ctx.db.patch(id, { folder: "Trash", folderExternalId: destination });
+    await ctx.scheduler.runAfter(0, internal.emails.remoteMove, {
+      id,
+      to: destination,
+      from: null,
+    });
+    return null;
+  },
+});
+
 // `to` null means back to the inbox; `from` is the label/folder being left.
 export const remoteMove = internalAction({
   args: {
@@ -86,25 +107,14 @@ export const remoteMove = internalAction({
     const email: Doc<"emails"> | null = await ctx.runQuery(internal.emails.get, { id });
     if (!email) return null;
     try {
-      if (email.provider === "google") {
-        const msgId = email.externalId.replace(/^google:/, "");
-        const body = to
-          ? { addLabelIds: [to], removeLabelIds: ["INBOX"] }
-          : { addLabelIds: ["INBOX"], removeLabelIds: from ? [from] : [] };
-        await gmail(ctx, `messages/${msgId}/modify`, {
-          method: "POST",
-          body: JSON.stringify(body),
-        });
-      } else {
-        const msgId = email.externalId.replace(/^microsoft:/, "");
-        // Outlook assigns a new message id after a move.
-        const moved = (await graph(ctx, `messages/${msgId}/move`, {
-          method: "POST",
-          body: JSON.stringify({ destinationId: to ?? "inbox" }),
-        })) as { id: string };
+      const externalId = await moveMail(email, to, from, {
+        gmail: (path, init) => gmail(ctx, path, init),
+        graph: (path, init) => graph(ctx, path, init),
+      });
+      if (externalId) {
         await ctx.runMutation(internal.emails.setExternalId, {
           id,
-          externalId: `microsoft:${moved.id}`,
+          externalId,
         });
       }
     } catch (e) {
@@ -144,6 +154,8 @@ const fetchedEmail = v.object({
   subject: v.string(),
   snippet: v.string(),
   receivedAt: v.number(),
+  threadId: v.optional(v.string()),
+  webUrl: v.optional(v.string()),
 });
 
 export const replaceInbox = internalMutation({
@@ -164,6 +176,7 @@ export const replaceInbox = internalMutation({
         .withIndex("by_externalId", (q) => q.eq("externalId", e.externalId))
         .first();
       if (!existing) await ctx.db.insert("emails", { ...e, provider: p });
+      else if (!existing.folder) await ctx.db.patch(existing._id, e);
     }
     return null;
   },
@@ -179,16 +192,17 @@ export const sync = action({
     const g = await ctx.runQuery(internal.oauth.getToken, { provider: "google" });
     if (g) {
       try {
-        const list = (await gmail(ctx, "messages?labelIds=INBOX&maxResults=30")) as {
+        const list = (await gmail(ctx, `messages?labelIds=INBOX&maxResults=${EMAIL_BATCH_SIZE}`)) as {
           messages?: { id: string }[];
         };
-        const emails = await Promise.all(
-          (list.messages ?? []).map(async ({ id }) => {
+        const emails = await mapMailBatch(
+          list.messages ?? [], async ({ id }) => {
             const m = (await gmail(
               ctx,
               `messages/${id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject`,
             )) as {
               snippet: string;
+              threadId?: string;
               internalDate: string;
               payload: { headers: { name: string; value: string }[] };
             };
@@ -199,8 +213,9 @@ export const sync = action({
               subject: h("Subject") || "(no subject)",
               snippet: decodeEntities(m.snippet),
               receivedAt: Number(m.internalDate),
+              threadId: m.threadId,
             };
-          }),
+          },
         );
         await ctx.runMutation(internal.emails.replaceInbox, { provider: "google", emails });
         result.google = `${emails.length} emails`;
@@ -214,13 +229,14 @@ export const sync = action({
       try {
         const { value } = (await graph(
           ctx,
-          "mailFolders/inbox/messages?$top=30&$select=id,subject,from,bodyPreview,receivedDateTime&$orderby=receivedDateTime desc",
+          `mailFolders/inbox/messages?$top=${EMAIL_BATCH_SIZE}&$select=id,subject,from,bodyPreview,receivedDateTime,webLink&$orderby=receivedDateTime desc`,
         )) as {
           value: {
             id: string;
             subject: string | null;
             bodyPreview: string;
             receivedDateTime: string;
+            webLink?: string;
             from?: { emailAddress: { name: string; address: string } };
           }[];
         };
@@ -230,6 +246,7 @@ export const sync = action({
           subject: m.subject || "(no subject)",
           snippet: m.bodyPreview.slice(0, 300),
           receivedAt: Date.parse(m.receivedDateTime),
+          webUrl: m.webLink,
         }));
         await ctx.runMutation(internal.emails.replaceInbox, { provider: "microsoft", emails });
         result.microsoft = `${emails.length} emails`;

@@ -52,13 +52,17 @@ export function pickCalendar(text: string, calendars: CalendarOption[]): Calenda
   const hay = tokens(text);
   let best: { cal: CalendarOption; score: number } | null = null;
   for (const cal of calendars) {
-    const needle = tokens(cal.name);
-    if (!needle.length) continue;
-    const joined = needle.join("");
-    if (joined.length < 3) continue;
-    if (containsRun(hay, needle) || containsJoined(hay, joined)) {
-      const score = joined.length;
-      if (!best || score > best.score) best = { cal, score };
+    // Course calendars often include a description after the course number.
+    const courseCodes = cal.name.match(/\b(?:\d+|[a-z]{2,})\.\d+[a-z]?\b/gi) ?? [];
+    for (const name of [cal.name, ...courseCodes]) {
+      const needle = tokens(name);
+      if (!needle.length) continue;
+      const joined = needle.join("");
+      if (joined.length < 3) continue;
+      if (containsRun(hay, needle) || containsJoined(hay, joined)) {
+        const score = joined.length;
+        if (!best || score > best.score) best = { cal, score };
+      }
     }
   }
   return best?.cal ?? null;

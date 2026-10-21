@@ -4,6 +4,16 @@ import { v } from "convex/values";
 export const provider = v.union(v.literal("google"), v.literal("microsoft"));
 
 export default defineSchema({
+  notes: defineTable({
+    title: v.string(),
+    body: v.string(),
+    updatedAt: v.number(),
+  }).index("by_updatedAt", ["updatedAt"]),
+
+  hiddenCalendars: defineTable({
+    calendarId: v.string(),
+  }).index("by_calendarId", ["calendarId"]),
+
   tasks: defineTable({
     title: v.string(),
     due: v.optional(v.number()),
@@ -51,10 +61,13 @@ export default defineSchema({
     subject: v.string(),
     snippet: v.string(),
     receivedAt: v.number(),
+    threadId: v.optional(v.string()),
+    webUrl: v.optional(v.string()),
     folder: v.optional(v.string()),
     folderExternalId: v.optional(v.string()),
   })
     .index("by_folder", ["folder"])
+    .index("by_folder_and_receivedAt", ["folder", "receivedAt"])
     .index("by_externalId", ["externalId"]),
 
   oauthTokens: defineTable({

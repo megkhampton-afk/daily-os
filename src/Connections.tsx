@@ -37,8 +37,8 @@ export function Connections() {
         r.microsoft && `Outlook: ${r.microsoft}`,
       ].filter(Boolean);
       if (!parts.length) toast.info("Connect an account first");
-      else if (parts.some((p) => String(p).includes("error"))) toast.error(parts.join(" Â· "));
-      else toast.success(parts.join(" Â· "));
+      else if (parts.some((p) => String(p).includes("error"))) toast.error(parts.join(" · "));
+      else toast.success(parts.join(" · "));
     } finally {
       setSyncing(false);
     }
@@ -85,9 +85,14 @@ export function Connections() {
             ) : null}
             <div className="ml-auto">
               {r.account ? (
-                <Button size="sm" variant="ghost" onClick={() => void disconnect({ key, provider: r.id })}>
-                  Disconnect
-                </Button>
+                <>
+                  <Button size="sm" variant="outline" onClick={() => void connect(r.id)}>
+                    Reconnect
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => void disconnect({ key, provider: r.id })}>
+                    Disconnect
+                  </Button>
+                </>
               ) : status && !r.configured ? (
                 <Button size="sm" variant="outline" asChild>
                   <a href="#setup">Set up</a>
